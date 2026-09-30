@@ -1,13 +1,15 @@
 {
   "name": "spamhaus-api-checker",
   "version": "1.0.0",
+  "description": "Spamhaus Bulk IP Reputation Checker via Intel API",
   "main": "app.js",
+  "license": "MIT",
   "scripts": {
     "start": "node app.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "axios": "^1.6.0",
     "cors": "^2.8.5",
-    "axios": "^1.6.0"
+    "express": "^4.18.2"
   }
 }
