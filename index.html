@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spamhaus Official API Checker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { font-family: sans-serif; background-color: #f8fafb; }
+    .bg-teal-spamhaus { background-color: #00b887; }
+    .bg-teal-spamhaus:hover { background-color: #00a075; }
+    .badge-not-listed { background-color: #e6f8f3; color: #008763; border: 1px solid #c2f0e3; }
+    .badge-listed { background-color: #fde8e8; color: #e02424; border: 1px solid #fbd5d5; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 py-6 flex justify-between items-center">
+      <div>
+        <h1 class="text-3xl font-extrabold text-slate-900">Spamhaus reputation checker</h1>
+        <p class="text-slate-500 text-sm mt-1">Official REST API Live Data Connection</p>
+      </div>
+      <div class="bg-slate-100 border border-slate-200 px-4 py-2 rounded-xl text-xs font-mono">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block mr-1"></span>
+        User: slolhqwv@92190379
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-8 flex-grow w-full">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+      <!-- Left Input Panel -->
+      <section class="lg:col-span-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <h2 class="text-lg font-bold text-slate-900">Check IPs or CIDRs</h2>
+        <p class="text-xs text-slate-500">Paste IPv4 addresses or CIDR blocks below:</p>
+
+        <textarea id="ipInputArea" rows="10" class="w-full p-4 font-mono text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-teal-500" placeholder="85.204.182.202&#10;45.150.206.0/24"></textarea>
+
+        <button onclick="triggerScan()" id="btnCheckIPs" class="w-full bg-teal-spamhaus text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition">
+          <span id="btnText">Check via API</span>
+        </button>
+      </section>
+
+      <!-- Right Table Panel -->
+      <section class="lg:col-span-8 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+        <div class="flex items-center space-x-6 text-sm font-medium pb-2 border-b border-slate-200">
+          <div><span id="cntScanned" class="font-bold text-slate-900 font-mono">0</span> <span class="text-slate-500">scanned</span></div>
+          <div><span id="cntClean" class="font-bold text-emerald-600 font-mono">0</span> <span class="text-slate-500">clean</span></div>
+          <div><span id="cntListed" class="font-bold text-rose-600 font-mono">0</span> <span class="text-slate-500">listed</span></div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="text-xs font-semibold text-slate-500 border-b border-slate-200">
+                <th class="pb-3">IP / CIDR</th>
+                <th class="pb-3 text-right">Official API Status</th>
+              </tr>
+            </thead>
+            <tbody id="resultsTableBody" class="divide-y divide-slate-100 text-sm font-mono">
+              <!-- Result Rows -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script>
+    async function triggerScan() {
+      const text = document.getElementById('ipInputArea').value;
+      const ips = text.split(/[\n,\s;]+/).map(i => i.trim()).filter(i => i !== '');
+
+      if (ips.length === 0) return alert('Enter IPs to check!');
+
+      document.getElementById('btnText').innerText = "Querying Spamhaus API...";
+      document.getElementById('btnCheckIPs').disabled = true;
+
+      try {
+        const res = await fetch('/api/check-intel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ips: ips })
+        });
+
+        const data = await res.json();
+        renderResults(data.results || []);
+
+      } catch (e) {
+        alert('API Connection Failed!');
+      } finally {
+        document.getElementById('btnText').innerText = "Check via API";
+        document.getElementById('btnCheckIPs').disabled = false;
+      }
+    }
+
+    function renderResults(results) {
+      const tbody = document.getElementById('resultsTableBody');
+      const total = results.length;
+      const listed = results.filter(r => r.isListed).length;
+
+      document.getElementById('cntScanned').innerText = total;
+      document.getElementById('cntClean').innerText = total - listed;
+      document.getElementById('cntListed').innerText = listed;
+
+      tbody.innerHTML = results.map(r => {
+        const badge = r.isListed 
+          ? `<span class="badge-listed px-3 py-1 rounded-full text-xs font-bold">✕ Listed</span>`
+          : `<span class="badge-not-listed px-3 py-1 rounded-full text-xs font-bold">✓ Not listed</span>`;
+
+        return `
+          <tr>
+            <td class="py-3.5 font-bold">${r.ip}</td>
+            <td class="py-3.5 text-right">${badge}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+  </script>
+</body>
+</html>
